@@ -1,0 +1,33 @@
+name: Deploy Coqui TTS
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y espeak-ng
+        python -m pip install --upgrade pip
+        pip install TTS
+        pip install -e .[all,dev,notebooks] # 安装相关依赖
+
+    - name: Run Coqui TTS
+      run: |
+        python -c "import torch; print(torch.cuda.is_available())"
+        python -c "from TTS.api import TTS; tts = TTS('tts_models/en/ljspeech/tacotron2-DDC'); tts.tts_to_file(text='Hello world!', file_path='output.wav')"
