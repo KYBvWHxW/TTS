@@ -1,33 +1,45 @@
-name: Deploy Coqui TTS
+name: Coqui TTS Deployment
 
 on:
   push:
-    branches: [ dev ]
+    branches:
+      - main
   pull_request:
-    branches: [ dev ]
+    branches:
+      - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'  # or the required Python version
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y espeak-ng
-        python -m pip install --upgrade pip
-        pip install TTS
-        pip install -e .[all,dev,notebooks] # 安装相关依赖
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Run Coqui TTS
-      run: |
-        python -c "import torch; print(torch.cuda.is_available())"
-        python -c "from TTS.api import TTS; tts = TTS('tts_models/en/ljspeech/tacotron2-DDC'); tts.tts_to_file(text='Hello world!', file_path='output.wav')"
+      - name: Download HiFi-GAN model
+        run: |
+          mkdir -p models
+          wget -O models/hifigan_generator.pth https://path-to-your-hifigan-generator-model
+          wget -O models/hifigan_discriminator.pth https://path-to-your-hifigan-discriminator-model
+          wget -O config.json https://path-to-your-config-json
+
+      - name: Run TTS
+        run: |
+          echo 'Hello world!' > input.txt
+          python -m TTS.bin.synthesize --text_path input.txt --model_path models/hifigan_generator.pth --config_path config.json --out_path output.wav
+
+      - name: Upload output
+        uses: actions/upload-artifact@v2
+        with:
+          name: tts-output
+          path: output.wav
